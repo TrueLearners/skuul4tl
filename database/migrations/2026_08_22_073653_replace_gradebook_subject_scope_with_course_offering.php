@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
 
 return new class extends Migration
 {
@@ -58,9 +58,34 @@ return new class extends Migration
             }
         }
 
+        // TiDB will not drop a column while a secondary index still uses it.
+        // Remove affected secondary indexes first. Keep PRIMARY indexes intact.
+        $legacyNames = ['subject_id', 'academic_year_id', 'academic_period_id'];
+        $indexes = Schema::getIndexes($tableName);
+
+        foreach ($indexes as $index) {
+            $usesLegacyColumn = count(array_intersect($legacyNames, $index['columns'] ?? [])) > 0;
+            $isPrimary = ($index['primary'] ?? false) || strtoupper($index['name'] ?? '') === 'PRIMARY';
+
+            if ($usesLegacyColumn && ! $isPrimary && ! empty($index['name'])) {
+                Schema::table($tableName, function (Blueprint $table) use ($index): void {
+                    $table->dropIndex($index['name']);
+                });
+            }
+        }
+
+        // If a legacy column is part of the primary key, leave it in place.
+        // Dropping a primary-key column would be unsafe and TiDB rejects it.
+        $remainingIndexedColumns = collect(Schema::getIndexes($tableName))
+            ->flatMap(fn (array $index): array => $index['columns'] ?? [])
+            ->unique()
+            ->all();
+
         $legacyColumns = array_values(array_filter(
-            ['subject_id', 'academic_year_id', 'academic_period_id'],
-            fn (string $columnName): bool => Schema::hasColumn($tableName, $columnName)
+            $legacyNames,
+            fn (string $columnName): bool =>
+                Schema::hasColumn($tableName, $columnName)
+                && ! in_array($columnName, $remainingIndexedColumns, true)
         ));
 
         if ($legacyColumns !== []) {
