@@ -31,6 +31,7 @@ class InstallationController extends Controller
         return view('pages.install.index', [
             'checks' => $readiness->checks(),
             'ready' => $readiness->ready(),
+            'bootstrapAdmin' => $readiness->bootstrapAdminCandidate(),
             'emailConfigured' => $readiness->emailConfigured(),
             'appKeyAvailable' => filled(config('app.key')),
             'databaseSettings' => $configureDatabase->currentSettings(),
