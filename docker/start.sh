@@ -11,5 +11,7 @@ mkdir -p storage/framework/cache storage/framework/sessions \
   storage/framework/views storage/logs bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 
-# Run migrations once from the Render Shell after the first successful deploy.
+# Apply database migrations before starting the web server.
+php artisan migrate --force
+
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/skuul.conf
