@@ -36,6 +36,12 @@ class MoodleIntegrationController extends Controller
             'moodle_enabled' => ['nullable', 'boolean'],
         ]);
 
+        if (parse_url($data['moodle_base_url'], PHP_URL_SCHEME) !== 'https') {
+            throw ValidationException::withMessages([
+                'moodle_base_url' => 'Use your Moodle site HTTPS address.',
+            ]);
+        }
+
         $data['moodle_base_url'] = rtrim($data['moodle_base_url'], '/');
         if (!filled($data['moodle_token'])) {
             unset($data['moodle_token']);
