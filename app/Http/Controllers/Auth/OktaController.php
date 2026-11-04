@@ -4,6 +4,7 @@ namespace App\\Http\\Controllers\\Auth;
 
 use App\\Enums\\Role;
 use App\\Http\\Controllers\\Controller;
+use App\\Models\\StaffAccessRequest;
 use App\\Models\\User;
 use Illuminate\\Http\\RedirectResponse;
 use Illuminate\\Support\\Facades\\Auth;
@@ -36,8 +37,6 @@ class OktaController extends Controller
         }
 
         $claims = $identity->getRaw();
-        // Okta tenants can return the sign-in name in preferred_username
-        // while the email claim is mapped separately.
         $email = strtolower(trim((string) (
             $identity->getEmail()
             ?: ($claims['email'] ?? $claims['preferred_username'] ?? '')
@@ -48,40 +47,47 @@ class OktaController extends Controller
 
         if (!$domainAllowed || !$emailVerified) {
             return redirect()->route('login')->withErrors([
-                'email' => 'Use a verified @truelearners.org account to sign in with Okta.',
+                'email' => 'Use a verified @truelearners.org account to continue.',
             ]);
         }
 
-        // Match the existing Skuul account by normalized email. Okta's
-        // verified claim is authoritative for email verification; it does
-        // not create accounts or grant any roles.
         $user = User::query()
             ->whereRaw('LOWER(TRIM(email)) = ?', [$email])
             ->first();
 
-        if (!$user || !$user->hasActiveAccount()) {
-            return redirect()->route('login')->withErrors([
-                'email' => 'No active Skuul account matches this TrueLearners email. Contact an administrator.',
-            ]);
+        if ($user && $user->hasActiveAccount()) {
+            $isStaff = $user->worksAsStaff()
+                || $user->hasRole(Role::PlatformAdmin)
+                || $user->hasRole(Role::OrganizationAdmin);
+
+            if ($isStaff) {
+                if (!$user->hasVerifiedEmail()) {
+                    $user->forceFill(['email_verified_at' => now()])->save();
+                }
+
+                Auth::guard('web')->login($user);
+                request()->session()->regenerate();
+
+                return redirect()->intended(config('fortify.home'));
+            }
         }
 
-        $isStaff = $user->worksAsStaff()
-            || $user->hasRole(Role::PlatformAdmin)
-            || $user->hasRole(Role::OrganizationAdmin);
+        // A verified TrueLearners identity may request teacher access.
+        // This stores a pending request only: no Skuul user, role, or
+        // school membership is created or changed here.
+        StaffAccessRequest::query()->updateOrCreate(
+            ['email' => $email],
+            [
+                'name' => trim((string) ($identity->getName() ?: $claims['name'] ?? $email)),
+                'requested_role' => 'teacher',
+                'status' => 'pending',
+                'okta_subject' => (string) $identity->getId(),
+                'review_note' => null,
+                'reviewed_by' => null,
+                'reviewed_at' => null,
+            ]
+        );
 
-        if (!$isStaff) {
-            return redirect()->route('login')->withErrors([
-                'email' => 'Your Skuul account is not approved for staff SSO yet. Contact a Skuul administrator.',
-            ]);
-        }
-
-        if (!$user->hasVerifiedEmail()) {
-            $user->forceFill(['email_verified_at' => now()])->save();
-        }
-
-        Auth::guard('web')->login($user);
-        request()->session()->regenerate();
-
-        return redirect()->intended(config('fortify.home'));
+        return redirect()->route('login.access-pending');
     }
 }
