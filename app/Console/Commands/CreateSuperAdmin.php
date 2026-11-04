@@ -1,17 +1,17 @@
 <?php
 
-namespace App\\Console\\Commands;
+namespace App\Console\Commands;
 
-use App\\Actions\\Authorization\\GrantSystemRole;
-use App\\Actions\\Fortify\\PasswordValidationRules;
-use App\\Enums\\Role;
-use App\\Models\\User;
-use Illuminate\\Console\\Command;
-use Illuminate\\Support\\Facades\\Hash;
-use Illuminate\\Support\\Facades\\Validator;
+use App\Actions\Authorization\GrantSystemRole;
+use App\Actions\Fortify\PasswordValidationRules;
+use App\Enums\Role;
+use App\Models\User;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
 
-use function Laravel\\Prompts\\password;
-use function Laravel\\Prompts\\text;
+use function Laravel\Prompts\password;
+use function Laravel\Prompts\text;
 
 class CreateSuperAdmin extends Command
 {
@@ -88,7 +88,7 @@ class CreateSuperAdmin extends Command
             $this->info('Platform admin account is ready.');
 
             return self::SUCCESS;
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             report($exception);
             $this->error('Could not create the platform admin. Check the application logs.');
 
