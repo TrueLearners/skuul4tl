@@ -68,8 +68,14 @@ class InstallApplication
                 throw new \InvalidArgumentException('The application is already installed.');
             }
 
-            if (User::query()->exists() || School::query()->exists()) {
-                throw new \InvalidArgumentException('This database already contains application data.');
+            $bootstrapAdmin = $this->readiness->bootstrapAdminCandidate();
+
+            if ((User::query()->exists() || School::query()->exists()) && $bootstrapAdmin === null) {
+                throw new \\InvalidArgumentException('This database already contains application data.');
+            }
+
+            if ($bootstrapAdmin !== null && strcasecmp($bootstrapAdmin->email, $data['admin_email']) !== 0) {
+                throw new \\InvalidArgumentException('Use the email address of the existing platform administrator to finish setup.');
             }
 
             Artisan::call('db:seed', [
@@ -77,15 +83,23 @@ class InstallApplication
                 '--force' => true,
             ]);
 
-            $admin = User::create([
-                'name' => $data['admin_name'],
-                'email' => $data['admin_email'],
-                'password' => Hash::make($data['admin_password']),
-            ]);
-            $admin->forceFill([
-                'account_status' => AccountStatus::Active,
-                'email_verified_at' => now(),
-            ])->save();
+            if ($bootstrapAdmin !== null) {
+                $admin = User::query()->findOrFail($bootstrapAdmin->id);
+                $admin->forceFill([
+                    'account_status' => AccountStatus::Active,
+                    'email_verified_at' => $admin->email_verified_at ?? now(),
+                ])->save();
+            } else {
+                $admin = User::create([
+                    'name' => $data['admin_name'],
+                    'email' => $data['admin_email'],
+                    'password' => Hash::make($data['admin_password']),
+                ]);
+                $admin->forceFill([
+                    'account_status' => AccountStatus::Active,
+                    'email_verified_at' => now(),
+                ])->save();
+            }
 
             $organization = $this->createOrganization->create([
                 'name' => $data['organization_name'],
