@@ -1,8 +1,17 @@
 # Skuul V3 — Render Docker deployment
+
+# Install PHP packages first because Vite imports Livewire and April UI from vendor/.
+FROM composer:2 AS vendor-build
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --prefer-dist --no-interaction --no-progress \
+      --no-scripts --optimize-autoloader --ignore-platform-reqs
+
 FROM node:24-bookworm-slim AS frontend
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
+COPY --from=vendor-build /app/vendor ./vendor
 COPY . .
 RUN npm run build
 
