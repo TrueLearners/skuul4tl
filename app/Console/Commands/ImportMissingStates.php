@@ -28,17 +28,19 @@ class ImportMissingStates extends Command
             return self::FAILURE;
         }
 
-        $jsonPath = base_path('vendor/nnjeim/world/resources/json/states.json');
+        $statesPath = base_path('vendor/nnjeim/world/resources/json/states.json');
+        $countriesPath = base_path('vendor/nnjeim/world/resources/json/countries.json');
 
-        if (!is_file($jsonPath)) {
+        if (!is_file($statesPath) || !is_file($countriesPath)) {
             $this->error('The states data file was not found: '.$jsonPath);
 
             return self::FAILURE;
         }
 
-        $statesData = json_decode(file_get_contents($jsonPath), true);
+        $statesData = json_decode(file_get_contents($statesPath), true);
+        $sourceCountries = json_decode(file_get_contents($countriesPath), true);
 
-        if (!is_array($statesData)) {
+        if (!is_array($statesData) || !is_array($sourceCountries)) {
             $this->error('The states data file could not be read.');
 
             return self::FAILURE;
@@ -48,6 +50,16 @@ class ImportMissingStates extends Command
             ->pluck('id', 'iso2')
             ->mapWithKeys(fn ($id, $iso2) => [strtoupper((string) $iso2) => (int) $id])
             ->all();
+
+        // The package's states.json links states to the package's own numeric
+        // country IDs, not ISO country codes. Translate those IDs through
+        // countries.json before matching the already-installed countries.
+        $sourceCountryCodes = [];
+        foreach ($sourceCountries as $sourceCountry) {
+            if (isset($sourceCountry['id'], $sourceCountry['iso2'])) {
+                $sourceCountryCodes[(int) $sourceCountry['id']] = strtoupper((string) $sourceCountry['iso2']);
+            }
+        }
 
         $existingKeys = [];
         foreach ($database->table($statesTable)->select(['country_id', 'name'])->get() as $state) {
@@ -59,7 +71,8 @@ class ImportMissingStates extends Command
 
         $missing = [];
         foreach ($statesData as $state) {
-            $countryCode = strtoupper((string) ($state['country_code'] ?? ''));
+            $sourceCountryId = (int) ($state['country_id'] ?? 0);
+            $countryCode = $sourceCountryCodes[$sourceCountryId] ?? '';
             $countryId = $countryIds[$countryCode] ?? null;
             $name = trim((string) ($state['name'] ?? ''));
 
