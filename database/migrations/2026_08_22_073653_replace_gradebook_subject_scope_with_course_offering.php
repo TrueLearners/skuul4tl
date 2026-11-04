@@ -1,16 +1,16 @@
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     /**
      * Run the migrations.
      *
-     * This migration is intentionally safe to retry because some MySQL-compatible
-     * databases may finish individual DDL statements before a later statement fails.
+     * This migration is safe to retry because MySQL-compatible databases may
+     * complete individual DDL statements before a later statement fails.
      */
     public function up(): void
     {
@@ -31,7 +31,6 @@ return new class extends Migration
             });
         }
 
-        // Add the relationship only when it is not already present.
         $foreignKeys = Schema::getForeignKeys($tableName);
         $hasCourseOfferingForeignKey = collect($foreignKeys)->contains(
             fn (array $key): bool => in_array('course_offering_id', $key['columns'] ?? [], true)
@@ -46,7 +45,6 @@ return new class extends Migration
             });
         }
 
-        // Drop legacy foreign keys only if they still exist.
         foreach (['subject_id', 'academic_year_id', 'academic_period_id'] as $columnName) {
             $foreignKeys = Schema::getForeignKeys($tableName);
             $foreignKey = collect($foreignKeys)->first(
