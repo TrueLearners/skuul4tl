@@ -1,43 +1,79 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\\Database\\Migrations\\Migration;
+use Illuminate\\Database\\Schema\\Blueprint;
+use Illuminate\\Support\\Facades\\Schema;
 
 return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * This migration is intentionally safe to retry because some MySQL-compatible
+     * databases may finish individual DDL statements before a later statement fails.
      */
     public function up(): void
     {
-        Schema::table('grade_categories', function (Blueprint $table): void {
-            $table->foreignId('course_offering_id')->nullable()->after('school_id')->constrained()->cascadeOnDelete();
-            $table->dropForeign(['subject_id']);
-            $table->dropForeign(['academic_year_id']);
-            $table->dropForeign(['academic_period_id']);
-            $table->dropColumn(['subject_id', 'academic_year_id', 'academic_period_id']);
-        });
+        $this->replaceScope('grade_categories');
+        $this->replaceScope('grade_items');
+        $this->replaceScope('result_snapshots');
+    }
 
-        Schema::table('grade_items', function (Blueprint $table): void {
-            $table->foreignId('course_offering_id')->nullable()->after('school_id')->constrained()->cascadeOnDelete();
-            $table->dropForeign(['subject_id']);
-            $table->dropForeign(['academic_year_id']);
-            $table->dropForeign(['academic_period_id']);
-            $table->dropColumn(['subject_id', 'academic_year_id', 'academic_period_id']);
-        });
+    private function replaceScope(string $tableName): void
+    {
+        if (! Schema::hasTable($tableName)) {
+            return;
+        }
 
-        Schema::table('result_snapshots', function (Blueprint $table): void {
-            $table->foreignId('course_offering_id')->nullable()->after('school_id')->constrained()->cascadeOnDelete();
-            $table->dropForeign(['subject_id']);
-            $table->dropForeign(['academic_year_id']);
-            $table->dropForeign(['academic_period_id']);
-            $table->dropColumn(['subject_id', 'academic_year_id', 'academic_period_id']);
-        });
+        if (! Schema::hasColumn($tableName, 'course_offering_id')) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->unsignedBigInteger('course_offering_id')->nullable();
+            });
+        }
+
+        // Add the relationship only when it is not already present.
+        $foreignKeys = Schema::getForeignKeys($tableName);
+        $hasCourseOfferingForeignKey = collect($foreignKeys)->contains(
+            fn (array $key): bool => in_array('course_offering_id', $key['columns'] ?? [], true)
+        );
+
+        if (! $hasCourseOfferingForeignKey) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->foreign('course_offering_id')
+                    ->references('id')
+                    ->on('course_offerings')
+                    ->cascadeOnDelete();
+            });
+        }
+
+        // Drop legacy foreign keys only if they still exist.
+        foreach (['subject_id', 'academic_year_id', 'academic_period_id'] as $columnName) {
+            $foreignKeys = Schema::getForeignKeys($tableName);
+            $foreignKey = collect($foreignKeys)->first(
+                fn (array $key): bool => in_array($columnName, $key['columns'] ?? [], true)
+            );
+
+            if ($foreignKey && ! empty($foreignKey['name'])) {
+                Schema::table($tableName, function (Blueprint $table) use ($foreignKey): void {
+                    $table->dropForeign($foreignKey['name']);
+                });
+            }
+        }
+
+        $legacyColumns = array_values(array_filter(
+            ['subject_id', 'academic_year_id', 'academic_period_id'],
+            fn (string $columnName): bool => Schema::hasColumn($tableName, $columnName)
+        ));
+
+        if ($legacyColumns !== []) {
+            Schema::table($tableName, function (Blueprint $table) use ($legacyColumns): void {
+                $table->dropColumn($legacyColumns);
+            });
+        }
     }
 
     /**
-     * Reverse the migrations.
+     * Reverse the migration.
      */
     public function down(): void
     {
