@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\OktaController;
+use App\Http\Controllers\MoodleIntegrationController;
 use App\Http\Controllers\AcademicCycleSectionController;
 use App\Http\Controllers\AcademicLevelController;
 use App\Http\Controllers\AcademicPeriodController;
@@ -143,9 +144,9 @@ Route::middleware('auth', 'verified', 'App\Http\Middleware\EnsureAccountIsActive
     });
 
     Route::get('schools/settings', ['App\Http\Controllers\SchoolController', 'settings'])->name('schools.settings')->middleware('App\Http\Middleware\RequireActiveSchool');
-    Route::get('integrations/moodle', [\\App\\Http\\Controllers\\MoodleIntegrationController::class, 'edit'])->name('integrations.moodle.edit')->middleware('App\\Http\\Middleware\\RequireActiveSchool');
-    Route::put('integrations/moodle', [\\App\\Http\\Controllers\\MoodleIntegrationController::class, 'update'])->name('integrations.moodle.update')->middleware('App\\Http\\Middleware\\RequireActiveSchool');
-    Route::post('integrations/moodle/test', [\\App\\Http\\Controllers\\MoodleIntegrationController::class, 'test'])->name('integrations.moodle.test')->middleware('App\\Http\\Middleware\\RequireActiveSchool');
+    Route::get('integrations/moodle', [MoodleIntegrationController::class, 'edit'])->name('integrations.moodle.edit')->middleware('App\\Http\\Middleware\\RequireActiveSchool');
+    Route::put('integrations/moodle', [MoodleIntegrationController::class, 'update'])->name('integrations.moodle.update')->middleware('App\\Http\\Middleware\\RequireActiveSchool');
+    Route::post('integrations/moodle/test', [MoodleIntegrationController::class, 'test'])->name('integrations.moodle.test')->middleware('App\\Http\\Middleware\\RequireActiveSchool');
     Route::view('schools/operating-profile', 'pages.school.operating-profile')->name('schools.operating-profile.edit')->middleware('App\Http\Middleware\RequireActiveSchool');
     Route::view('schools/features', 'pages.school.features')->name('schools.features.edit')->middleware('App\Http\Middleware\RequireActiveSchool');
 
