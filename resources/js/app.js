@@ -147,30 +147,39 @@ window.locationFields = function locationFields(configuration) {
             }
 
             this.loading = true;
+            const country = encodeURIComponent(this.country);
 
+            // Load states independently. A slow or failed cities request must
+            // never prevent the state/province dropdown from becoming usable.
             try {
-                const country = encodeURIComponent(this.country);
-                const [statesResponse, citiesResponse] = await Promise.all([
-                    fetch(configuration.statesUrl + "?country=" + country, {
-                        headers: { Accept: "application/json" },
-                    }),
-                    fetch(configuration.citiesUrl + "?country=" + country, {
-                        headers: { Accept: "application/json" },
-                    }),
-                ]);
+                const response = await fetch(configuration.statesUrl + "?country=" + country, {
+                    headers: { Accept: "application/json" },
+                });
 
-                if (requestId !== this.requestId) {
-                    return;
-                }
+                if (requestId !== this.requestId) return;
 
-                this.states = statesResponse.ok ? await statesResponse.json() : [];
-                this.cities = citiesResponse.ok ? await citiesResponse.json() : [];
+                this.states = response.ok ? await response.json() : [];
                 this.state = this.states.includes(selectedState) ? selectedState : "";
-                this.city = selectedCity;
+            } catch (error) {
+                console.error("Could not load states/provinces:", error);
+                if (requestId === this.requestId) this.states = [];
             } finally {
-                if (requestId === this.requestId) {
-                    this.loading = false;
-                }
+                if (requestId === this.requestId) this.loading = false;
+            }
+
+            // Cities are optional and may take much longer to load.
+            try {
+                const response = await fetch(configuration.citiesUrl + "?country=" + country, {
+                    headers: { Accept: "application/json" },
+                });
+
+                if (requestId !== this.requestId) return;
+
+                this.cities = response.ok ? await response.json() : [];
+                this.city = selectedCity;
+            } catch (error) {
+                console.error("Could not load cities:", error);
+                if (requestId === this.requestId) this.cities = [];
             }
         },
     };
