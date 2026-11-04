@@ -28,6 +28,9 @@ class InstallationReadiness
         $databaseEmpty = $databaseReady && $schemaReady && User::query()->doesntExist()
             && Organization::query()->doesntExist()
             && School::query()->doesntExist();
+        $bootstrapAdmin = $databaseReady && $schemaReady && $this->bootstrapAdminCandidate() !== null
+            && Organization::query()->doesntExist()
+            && School::query()->doesntExist();
 
         return [
             'database' => $database,
@@ -43,14 +46,14 @@ class InstallationReadiness
             'world_data' => $this->checkWorldData(),
             'database_empty' => $this->check(
                 'Empty database',
-                $databaseEmpty,
-                'No application records will be overwritten.',
+                $databaseEmpty || $bootstrapAdmin,
+                $bootstrapAdmin ? 'The existing platform administrator can be used to finish setup.' : 'No application records will be overwritten.',
                 'This database already contains application data. Use a fresh database for installation.',
-                'Use a fresh database, or let Skuul detect the existing minimum setup.',
+                'Continue with the existing platform administrator, or use a fresh database.',
             ),
             'minimum_state' => $this->check(
                 'Minimum application state',
-                $databaseEmpty || ($databaseReady && $schemaReady && $this->existingInstallationCandidate() !== null),
+                $databaseEmpty || $bootstrapAdmin || ($databaseReady && $schemaReady && $this->existingInstallationCandidate() !== null),
                 'A usable administrator and organization-backed campus are available.',
                 'Create an active platform administrator with an active campus membership.',
             ),
@@ -94,6 +97,44 @@ class InstallationReadiness
 
         return !in_array($mailer, ['array', 'log'], true)
             && filled(config('mail.from.address'));
+    }
+
+    /**
+     * Find the single pre-created platform administrator when no organization
+     * or campus has been created yet.
+     */
+    public function bootstrapAdminCandidate(): ?User
+    {
+        try {
+            foreach (['users', 'organizations', 'schools', 'model_has_roles', 'roles', 'role_has_permissions', 'permissions'] as $table) {
+                if (!Schema::hasTable($table)) {
+                    return null;
+                }
+            }
+
+            if (User::query()->count() !== 1
+                || Organization::query()->exists()
+                || School::query()->exists()
+                || !Schema::hasColumn('users', 'account_status')) {
+                return null;
+            }
+
+            $admin = User::query()
+                ->where('account_status', AccountStatus::Active->value)
+                ->whereNull('deleted_at')
+                ->whereHas('roles', function ($query): void {
+                    $query->where('roles.name', Role::PlatformAdmin->value)
+                        ->whereNull('roles.school_id')
+                        ->whereHas('permissions', function ($permissions): void {
+                            $permissions->where('permissions.name', PlatformPermission::ManagePlatform->value);
+                        });
+                })
+                ->first();
+
+            return $admin;
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     /**
