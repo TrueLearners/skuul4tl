@@ -227,9 +227,8 @@
                                         <label for="campus_email" class="mb-2 block text-sm font-medium">Campus email <span class="font-normal text-muted-foreground">(optional)</span></label>
                                         <input id="campus_email" type="email" name="campus_email" value="{{ old('campus_email') }}" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                                     </div>
-                                    <div class="sm:col-span-2">
-                                        <x-school-address-fields prefix="campus" :countries="$countries" />
-                                    </div>
+                                    <input type="hidden" name="campus_country" value="United States">
+                                    <input type="hidden" name="campus_state" value="California">
                                 </div>
                             </section>
 
