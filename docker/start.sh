@@ -14,4 +14,7 @@ chown -R www-data:www-data storage bootstrap/cache
 # Apply database migrations before starting the web server.
 php artisan migrate --force
 
+# Fill in missing country states without truncating existing countries or states.
+php artisan world:import-missing-states
+
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/skuul.conf
