@@ -17,6 +17,7 @@
             ['label' => 'Timetables', 'icon' => 'lucide-clock-3', 'href' => route('timetables.index'), 'can' => 'read timetable'],
             ['label' => 'School language', 'icon' => 'lucide-languages', 'href' => route('schools.operating-profile.edit')],
             ['label' => 'School features', 'icon' => 'lucide-sliders-horizontal', 'href' => route('schools.features.edit')],
+            ['label' => 'Moodle integration', 'icon' => 'lucide-plug', 'href' => route('integrations.moodle.edit')],
         ];
         // Only offer the areas this person can open.
         $dayToDay = array_filter($dayToDay, fn (array $area): bool => !isset($area['can']) || auth()->user()->can($area['can']));
