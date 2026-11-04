@@ -53,4 +53,11 @@ return [
         'timeout' => (int) env('BROWSER_RENDERER_TIMEOUT', 120),
     ],
 
+    'okta' => [
+        'base_url' => env('OKTA_BASE_URL', 'https://truelearners.okta.com'),
+        'client_id' => env('OKTA_CLIENT_ID'),
+        'client_secret' => env('OKTA_CLIENT_SECRET'),
+        'redirect' => env('OKTA_REDIRECT_URI', 'https://skuul.truelearners.org/login/okta/callback'),
+    ],
+
 ];
