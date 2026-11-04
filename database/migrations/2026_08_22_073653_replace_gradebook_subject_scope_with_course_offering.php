@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\\Database\\Migrations\\Migration;
-use Illuminate\\Database\\Schema\\Blueprint;
-use Illuminate\\Support\\Facades\\Schema;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -45,7 +45,11 @@ return new class extends Migration
             });
         }
 
-        foreach (['subject_id', 'academic_year_id', 'academic_period_id'] as $columnName) {
+        $legacyNames = ['subject_id', 'academic_year_id', 'academic_period_id'];
+
+        // Remove foreign keys first, then secondary indexes that include
+        // legacy columns. TiDB refuses to drop an indexed column.
+        foreach ($legacyNames as $columnName) {
             $foreignKeys = Schema::getForeignKeys($tableName);
             $foreignKey = collect($foreignKeys)->first(
                 fn (array $key): bool => in_array($columnName, $key['columns'] ?? [], true)
@@ -58,14 +62,11 @@ return new class extends Migration
             }
         }
 
-        // TiDB will not drop a column while a secondary index still uses it.
-        // Remove affected secondary indexes first. Keep PRIMARY indexes intact.
-        $legacyNames = ['subject_id', 'academic_year_id', 'academic_period_id'];
-        $indexes = Schema::getIndexes($tableName);
-
-        foreach ($indexes as $index) {
-            $usesLegacyColumn = count(array_intersect($legacyNames, $index['columns'] ?? [])) > 0;
-            $isPrimary = ($index['primary'] ?? false) || strtoupper($index['name'] ?? '') === 'PRIMARY';
+        foreach (Schema::getIndexes($tableName) as $index) {
+            $columns = $index['columns'] ?? [];
+            $usesLegacyColumn = count(array_intersect($legacyNames, $columns)) > 0;
+            $isPrimary = ($index['primary'] ?? false)
+                || strtoupper($index['name'] ?? '') === 'PRIMARY';
 
             if ($usesLegacyColumn && ! $isPrimary && ! empty($index['name'])) {
                 Schema::table($tableName, function (Blueprint $table) use ($index): void {
@@ -74,9 +75,9 @@ return new class extends Migration
             }
         }
 
-        // If a legacy column is part of the primary key, leave it in place.
-        // Dropping a primary-key column would be unsafe and TiDB rejects it.
-        $remainingIndexedColumns = collect(Schema::getIndexes($tableName))
+        // Never attempt to remove a column that remains in an index
+        // (for example, a primary key). This keeps the migration retry-safe.
+        $indexedColumns = collect(Schema::getIndexes($tableName))
             ->flatMap(fn (array $index): array => $index['columns'] ?? [])
             ->unique()
             ->all();
@@ -85,7 +86,7 @@ return new class extends Migration
             $legacyNames,
             fn (string $columnName): bool =>
                 Schema::hasColumn($tableName, $columnName)
-                && ! in_array($columnName, $remainingIndexedColumns, true)
+                && ! in_array($columnName, $indexedColumns, true)
         ));
 
         if ($legacyColumns !== []) {
