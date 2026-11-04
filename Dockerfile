@@ -27,8 +27,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j"$(nproc)" bcmath exif gd intl mbstring \
          pcntl pdo_mysql xml zip opcache \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
     && a2enmod rewrite headers expires \
     && rm -rf /var/lib/apt/lists/*
 
@@ -38,7 +36,7 @@ COPY . .
 COPY --from=frontend /app/public/build ./public/build
 
 # Add the S3-compatible Flysystem adapter for Backblaze B2.
-RUN composer require league/flysystem-aws-s3-v3:^3.0 \
+RUN composer require league/flysystem-aws-s3-v3:^3.0 predis/predis:^3.0 \
       --no-interaction --no-progress --no-scripts --no-install \
     && composer install --no-dev --prefer-dist --no-interaction \
       --no-progress --optimize-autoloader --no-scripts \
