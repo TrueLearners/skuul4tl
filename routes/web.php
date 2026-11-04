@@ -96,6 +96,7 @@ Route::get('/home', function () {
 Route::middleware(['guest'])->group(function () {
     Route::get('/login/okta', [OktaController::class, 'redirect'])->name('login.okta');
     Route::get('/login/okta/callback', [OktaController::class, 'callback'])->name('login.okta.callback');
+    Route::view('/login/access-pending', 'auth.access-pending')->name('login.access-pending');
     Route::get('/invitations/{token}', ['App\Http\Controllers\AccountInvitationController', 'show'])->name('invitations.show');
     Route::post('/invitations/{token}', ['App\Http\Controllers\AccountInvitationController', 'accept'])->name('invitations.accept');
 });
