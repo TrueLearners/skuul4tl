@@ -117,6 +117,10 @@ class AppServiceProvider extends ServiceProvider
 
         Event::listen(Registered::class, SendEmailVerificationNotification::class);
 
+        Event::listen(function (\SocialiteProviders\Manager\SocialiteWasCalled $event): void {
+            $event->extendSocialite('okta', \SocialiteProviders\Okta\Provider::class);
+        });
+
         // Sensitive changes go to the audit log as they happen.
         Event::listen(AccountStatusChanged::class, RecordAccountStatusChange::class);
         Event::subscribe(RecordPermissionChanges::class);
