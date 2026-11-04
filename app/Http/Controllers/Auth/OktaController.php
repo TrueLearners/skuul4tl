@@ -1,14 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\\Http\\Controllers\\Auth;
 
-use App\Enums\Role;
-use App\Http\Controllers\Controller;
-use App\Models\StaffAccessRequest;
-use App\Models\User;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
-use Laravel\Socialite\Facades\Socialite;
+use App\\Enums\\Role;
+use App\\Http\\Controllers\\Controller;
+use App\\Models\\StaffAccessRequest;
+use App\\Models\\User;
+use Illuminate\\Http\\RedirectResponse;
+use Illuminate\\Support\\Facades\\Auth;
+use Laravel\\Socialite\\Facades\\Socialite;
 use Throwable;
 
 class OktaController extends Controller
@@ -56,7 +56,11 @@ class OktaController extends Controller
             ->first();
 
         if ($user && $user->hasActiveAccount()) {
+            // School administrators use the campus-scoped "admin" role.
+            // Platform/organization admins use system-scoped roles, while
+            // teachers and other staff are detected through active memberships.
             $isStaff = $user->worksAsStaff()
+                || $user->hasRole(Role::Admin)
                 || $user->hasRole(Role::PlatformAdmin)
                 || $user->hasRole(Role::OrganizationAdmin);
 

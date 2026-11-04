@@ -60,9 +60,10 @@ class MoodleIntegrationController extends Controller
         abort_unless($integration->exists && filled($integration->moodle_base_url) && filled($integration->moodle_token), 422, 'Save the Moodle URL and token first.');
 
         try {
-            $response = Http::acceptJson()
+            $response = Http::asForm()
+                ->acceptJson()
                 ->timeout(20)
-                ->get($integration->moodle_base_url.'/webservice/rest/server.php', [
+                ->post($integration->moodle_base_url.'/webservice/rest/server.php', [
                     'wstoken' => $integration->moodle_token,
                     'wsfunction' => 'core_webservice_get_site_info',
                     'moodlewsrestformat' => 'json',
