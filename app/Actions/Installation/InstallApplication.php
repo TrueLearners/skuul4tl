@@ -71,11 +71,11 @@ class InstallApplication
             $bootstrapAdmin = $this->readiness->bootstrapAdminCandidate();
 
             if ((User::query()->exists() || School::query()->exists()) && $bootstrapAdmin === null) {
-                throw new \\InvalidArgumentException('This database already contains application data.');
+                throw new \InvalidArgumentException('This database already contains application data.');
             }
 
             if ($bootstrapAdmin !== null && strcasecmp($bootstrapAdmin->email, $data['admin_email']) !== 0) {
-                throw new \\InvalidArgumentException('Use the email address of the existing platform administrator to finish setup.');
+                throw new \InvalidArgumentException('Use the email address of the existing platform administrator to finish setup.');
             }
 
             Artisan::call('db:seed', [
