@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace App\\Http\\Controllers\\Auth;
 
-use App\Enums\Role;
-use App\Http\Controllers\Controller;
-use App\Models\User;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Auth;
-use Laravel\Socialite\Facades\Socialite;
+use App\\Enums\\Role;
+use App\\Http\\Controllers\\Controller;
+use App\\Models\\User;
+use Illuminate\\Http\\RedirectResponse;
+use Illuminate\\Support\\Facades\\Auth;
+use Laravel\\Socialite\\Facades\\Socialite;
 use Throwable;
 
 class OktaController extends Controller
@@ -35,11 +35,16 @@ class OktaController extends Controller
             ]);
         }
 
-        $email = strtolower(trim((string) $identity->getEmail()));
+        $claims = $identity->getRaw();
+        // Okta tenants can return the sign-in name in preferred_username
+        // while the email claim is mapped separately.
+        $email = strtolower(trim((string) (
+            $identity->getEmail()
+            ?: ($claims['email'] ?? $claims['preferred_username'] ?? '')
+        )));
         $domainAllowed = filter_var($email, FILTER_VALIDATE_EMAIL)
             && str_ends_with($email, '@truelearners.org');
-        $rawIdentity = $identity->getRaw();
-        $emailVerified = filter_var($rawIdentity['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $emailVerified = filter_var($claims['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (!$domainAllowed || !$emailVerified) {
             return redirect()->route('login')->withErrors([
@@ -47,22 +52,31 @@ class OktaController extends Controller
             ]);
         }
 
-        // SSO never creates accounts or grants roles. An administrator must
-        // provision the account and its staff permissions in Skuul first.
+        // Match the existing Skuul account by normalized email. Okta's
+        // verified claim is authoritative for email verification; it does
+        // not create accounts or grant any roles.
         $user = User::query()
-            ->whereRaw('LOWER(email) = ?', [$email])
+            ->whereRaw('LOWER(TRIM(email)) = ?', [$email])
             ->first();
 
-        $isStaff = $user && (
-            $user->worksAsStaff()
-            || $user->hasRole(Role::PlatformAdmin)
-            || $user->hasRole(Role::OrganizationAdmin)
-        );
-
-        if (!$user || !$user->hasActiveAccount() || !$user->hasVerifiedEmail() || !$isStaff) {
+        if (!$user || !$user->hasActiveAccount()) {
             return redirect()->route('login')->withErrors([
-                'email' => 'Your TrueLearners account is not approved for staff SSO yet. Contact a Skuul administrator.',
+                'email' => 'No active Skuul account matches this TrueLearners email. Contact an administrator.',
             ]);
+        }
+
+        $isStaff = $user->worksAsStaff()
+            || $user->hasRole(Role::PlatformAdmin)
+            || $user->hasRole(Role::OrganizationAdmin);
+
+        if (!$isStaff) {
+            return redirect()->route('login')->withErrors([
+                'email' => 'Your Skuul account is not approved for staff SSO yet. Contact a Skuul administrator.',
+            ]);
+        }
+
+        if (!$user->hasVerifiedEmail()) {
+            $user->forceFill(['email_verified_at' => now()])->save();
         }
 
         Auth::guard('web')->login($user);
