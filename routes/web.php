@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\OktaController;
 use App\Http\Controllers\AcademicCycleSectionController;
 use App\Http\Controllers\AcademicLevelController;
 use App\Http\Controllers\AcademicPeriodController;
@@ -93,6 +94,8 @@ Route::get('/home', function () {
 
 // Accounts are provisioned by an administrator. There is no public registration.
 Route::middleware(['guest'])->group(function () {
+    Route::get('/login/okta', [OktaController::class, 'redirect'])->name('login.okta');
+    Route::get('/login/okta/callback', [OktaController::class, 'callback'])->name('login.okta.callback');
     Route::get('/invitations/{token}', ['App\Http\Controllers\AccountInvitationController', 'show'])->name('invitations.show');
     Route::post('/invitations/{token}', ['App\Http\Controllers\AccountInvitationController', 'accept'])->name('invitations.accept');
 });
