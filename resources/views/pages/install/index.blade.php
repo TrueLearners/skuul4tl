@@ -160,14 +160,18 @@
                                 </div>
 
                                 <div class="grid gap-4 sm:grid-cols-2">
+                                    @if ($bootstrapAdmin)
+                                        <input type="hidden" name="admin_name" value="{{ $bootstrapAdmin->name }}">
+                                    @else
                                     <div class="sm:col-span-2">
                                         <label for="admin_name" class="mb-2 block text-sm font-medium">Name</label>
                                         <input id="admin_name" name="admin_name" value="{{ old('admin_name') }}" required class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" autocomplete="name" {{ field_error_bindings('admin_name') }}>
                                         <x-field-error name="admin_name" class="mt-1" />
                                     </div>
+                                    @endif
                                     <div class="sm:col-span-2">
                                         <label for="admin_email" class="mb-2 block text-sm font-medium">Email</label>
-                                        <input id="admin_email" type="email" name="admin_email" value="{{ old('admin_email') }}" required class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" autocomplete="email" {{ field_error_bindings('admin_email') }}>
+                                        <input id="admin_email" type="email" name="admin_email" value="{{ old('admin_email', $bootstrapAdmin?->email) }}" required class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" autocomplete="email" {{ $bootstrapAdmin ? 'readonly' : '' }} {{ field_error_bindings('admin_email') }}>
                                         <x-field-error name="admin_email" class="mt-1" />
                                     </div>
                                     <div class="sm:col-span-2">
@@ -180,6 +184,11 @@
                                         <p class="mt-1 text-sm text-muted-foreground">This sets the default language for the Skuul interface after installation. You can leave English selected.</p>
                                         <x-field-error name="locale" class="mt-1" />
                                     </div>
+                                    @if ($bootstrapAdmin)
+                                        <div class="sm:col-span-2 rounded-lg border border-border/70 bg-muted/30 p-4 text-sm text-muted-foreground">
+                                            Skuul will use this existing platform administrator account. Your current password will stay the same.
+                                        </div>
+                                    @else
                                     <div>
                                         <label for="admin_password" class="mb-2 block text-sm font-medium">Password</label>
                                         <input id="admin_password" type="password" name="admin_password" required class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" autocomplete="new-password" {{ field_error_bindings('admin_password') }}>
@@ -189,6 +198,7 @@
                                         <label for="admin_password_confirmation" class="mb-2 block text-sm font-medium">Confirm password</label>
                                         <input id="admin_password_confirmation" type="password" name="admin_password_confirmation" required class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" autocomplete="new-password">
                                     </div>
+                                    @endif
                                 </div>
                             </section>
 
