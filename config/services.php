@@ -60,4 +60,10 @@ return [
         'redirect' => env('OKTA_REDIRECT_URI', 'https://skuul.truelearners.org/login/okta/callback'),
     ],
 
+    'moodle' => [
+        'base_url' => env('MOODLE_BASE_URL', 'https://truelearners.org'),
+        'token' => env('MOODLE_TOKEN'),
+        'timeout' => (int) env('MOODLE_TIMEOUT', 20),
+    ],
+
 ];
