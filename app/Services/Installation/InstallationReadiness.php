@@ -119,19 +119,23 @@ class InstallationReadiness
                 return null;
             }
 
-            $admin = User::query()
-                ->where('account_status', AccountStatus::Active->value)
-                ->whereNull('deleted_at')
-                ->whereHas('roles', function ($query): void {
-                    $query->where('roles.name', Role::PlatformAdmin->value)
-                        ->whereNull('roles.school_id')
-                        ->whereHas('permissions', function ($permissions): void {
-                            $permissions->where('permissions.name', PlatformPermission::ManagePlatform->value);
-                        });
+            $adminId = DB::table('users')
+                ->join('model_has_roles', function ($join): void {
+                    $join->on('model_has_roles.model_id', '=', 'users.id')
+                        ->where('model_has_roles.model_type', User::class);
                 })
-                ->first();
+                ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                ->join('role_has_permissions', 'role_has_permissions.role_id', '=', 'roles.id')
+                ->join('permissions', 'permissions.id', '=', 'role_has_permissions.permission_id')
+                ->where('users.account_status', AccountStatus::Active->value)
+                ->whereNull('users.deleted_at')
+                ->where('model_has_roles.school_id', SystemPermissionScope::SystemTeamId)
+                ->where('roles.name', Role::PlatformAdmin->value)
+                ->whereNull('roles.school_id')
+                ->where('permissions.name', PlatformPermission::ManagePlatform->value)
+                ->value('users.id');
 
-            return $admin;
+            return $adminId === null ? null : User::query()->find($adminId);
         } catch (Throwable) {
             return null;
         }
