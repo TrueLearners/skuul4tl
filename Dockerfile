@@ -36,7 +36,7 @@ COPY . .
 COPY --from=frontend /app/public/build ./public/build
 
 # Add the S3-compatible Flysystem adapter for Backblaze B2.
-RUN composer require league/flysystem-aws-s3-v3:^3.0 predis/predis:^3.0 \
+RUN composer require league/flysystem-aws-s3-v3:^3.0 predis/predis:^3.0 laravel/socialite:^5.0 socialiteproviders/okta:^4.5 \
       --no-interaction --no-progress --no-scripts --no-install \
     && composer install --no-dev --prefer-dist --no-interaction \
       --no-progress --optimize-autoloader --no-scripts \
