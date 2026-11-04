@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\CreateSuperAdmin;
 use App\Exceptions\ApplicationException;
 use App\Http\Middleware\EnsureApplicationInstalled;
 use App\Http\Middleware\EnsureFeatureIsEnabled;
