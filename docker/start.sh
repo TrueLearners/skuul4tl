@@ -7,7 +7,7 @@ export PORT
 envsubst '${PORT}' < /etc/apache2/ports.conf.template > /etc/apache2/ports.conf
 sed -i "s/:10000>/:\${PORT}>/" /etc/apache2/sites-available/000-default.conf
 
-mkdir -p storage/framework/cache storage/framework/sessions \
+mkdir -p storage/framework/cache storage/framework/sessions \\
   storage/framework/views storage/logs bootstrap/cache
 chown -R www-data:www-data storage bootstrap/cache
 
@@ -16,5 +16,11 @@ php artisan migrate --force
 
 # Fill in missing country states without truncating existing countries or states.
 php artisan world:import-missing-states
+
+# Optional one-time admin bootstrap. Credentials are read only from private
+# Render environment variables and are never printed to the deployment log.
+if [ "${TL_BOOTSTRAP_ADMIN:-0}" = "1" ]; then
+  php artisan skuul:create-super-admin --from-env
+fi
 
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/skuul.conf
