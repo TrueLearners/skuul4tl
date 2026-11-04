@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Validator as BaseValidator;
 use Laravel\Fortify\Fortify;
@@ -88,6 +89,12 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Render terminates HTTPS at its proxy and forwards requests to Apache
+        // over HTTP. Force generated form/action URLs to remain HTTPS.
+        if (app()->environment('production')) {
+            URL::forceScheme('https');
+        }
+
         Schema::defaultStringLength(100);
 
         // Global roles use the reserved Spatie system team and grant only
