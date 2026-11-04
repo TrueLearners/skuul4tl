@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -48,12 +49,17 @@ return new class extends Migration
         }
 
         if (! Schema::hasColumn($tableName, 'verified_host')) {
+            // TiDB does not support adding generated stored columns through ALTER TABLE.
+            // Use a normal nullable column and backfill hosts that are already verified.
             Schema::table($tableName, function (Blueprint $table): void {
-                $table->string('verified_host')
-                    ->nullable()
-                    ->storedAs('IF(verified_at IS NULL, NULL, host)');
+                $table->string('verified_host')->nullable();
             });
         }
+
+        DB::table($tableName)
+            ->whereNotNull('verified_at')
+            ->whereNull('verified_host')
+            ->update(['verified_host' => DB::raw('host')]);
 
         $indexes = Schema::getIndexes($tableName);
         $hasVerifiedHostUnique = collect($indexes)->contains(
