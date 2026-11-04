@@ -1,11 +1,10 @@
 <?php
 
-namespace App\\Console\\Commands;
+namespace App\Console\Commands;
 
-use Illuminate\\Console\\Command;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Schema;
-use RuntimeException;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ImportMissingStates extends Command
 {
@@ -98,7 +97,9 @@ class ImportMissingStates extends Command
         $this->info('United States state records currently available: '.$usCount.'.');
 
         if ($usCount === 0) {
-            throw new RuntimeException('No United States states were found after importing the reference data.');
+            $this->error('No United States states were found after importing the reference data.');
+
+            return self::FAILURE;
         }
 
         return self::SUCCESS;
