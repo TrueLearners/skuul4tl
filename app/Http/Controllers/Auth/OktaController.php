@@ -1,14 +1,14 @@
 <?php
 
-namespace App\\Http\\Controllers\\Auth;
+namespace App\Http\Controllers\Auth;
 
-use App\\Enums\\Role;
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\StaffAccessRequest;
-use App\\Models\\User;
-use Illuminate\\Http\\RedirectResponse;
-use Illuminate\\Support\\Facades\\Auth;
-use Laravel\\Socialite\\Facades\\Socialite;
+use App\Enums\Role;
+use App\Http\Controllers\Controller;
+use App\Models\StaffAccessRequest;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
+use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
 class OktaController extends Controller
@@ -72,13 +72,10 @@ class OktaController extends Controller
             }
         }
 
-        // A verified TrueLearners identity may request teacher access.
-        // This stores a pending request only: no Skuul user, role, or
-        // school membership is created or changed here.
         StaffAccessRequest::query()->updateOrCreate(
             ['email' => $email],
             [
-                'name' => trim((string) ($identity->getName() ?: $claims['name'] ?? $email)),
+                'name' => trim((string) ($identity->getName() ?: ($claims['name'] ?? $email))),
                 'requested_role' => 'teacher',
                 'status' => 'pending',
                 'okta_subject' => (string) $identity->getId(),
