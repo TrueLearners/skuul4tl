@@ -38,7 +38,8 @@ class OktaController extends Controller
         $email = strtolower(trim((string) $identity->getEmail()));
         $domainAllowed = filter_var($email, FILTER_VALIDATE_EMAIL)
             && str_ends_with($email, '@truelearners.org');
-        $emailVerified = ($identity->user['email_verified'] ?? false) === true;
+        $rawIdentity = $identity->getRaw();
+        $emailVerified = filter_var($rawIdentity['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
         if (!$domainAllowed || !$emailVerified) {
             return redirect()->route('login')->withErrors([
