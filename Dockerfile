@@ -17,7 +17,7 @@ RUN npm run build
 
 FROM composer:2 AS composer-bin
 
-FROM php:8.5-apache-bookworm
+FROM php:8.4-apache-bookworm
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public COMPOSER_ALLOW_SUPERUSER=1 PORT=10000
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libfreetype6-dev libonig-dev libxml2-dev libcurl4-openssl-dev \
       libssl-dev supervisor gettext-base default-mysql-client \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j"$(nproc)" bcmath exif gd intl mbstring \
+    && docker-php-ext-install -j2 bcmath exif gd intl mbstring \
          pcntl pdo_mysql xml zip opcache \
     && a2enmod rewrite headers expires \
     && rm -rf /var/lib/apt/lists/*
