@@ -9,18 +9,64 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * A claim nobody has proved no longer keeps the address from others. Only
-     * a proved address is unique, so an organization cannot hold another's
-     * web address by claiming it first and never proving it.
+     * Make each schema change conditional so a partially completed TiDB
+     * migration can be safely retried.
      */
     public function up(): void
     {
-        Schema::table('school_domains', function (Blueprint $table): void {
-            $table->dropUnique(['host']);
-            $table->unique(['organization_id', 'host']);
-            $table->string('verified_host')->nullable()->storedAs('IF(verified_at IS NULL, NULL, host)');
-            $table->unique('verified_host');
-        });
+        $tableName = 'school_domains';
+
+        if (! Schema::hasTable($tableName)) {
+            return;
+        }
+
+        $indexes = Schema::getIndexes($tableName);
+
+        // Drop the old single-column host unique index only if it exists.
+        foreach ($indexes as $index) {
+            $columns = $index['columns'] ?? [];
+            if (($index['unique'] ?? false)
+                && $columns === ['host']
+                && ! empty($index['name'])) {
+                Schema::table($tableName, function (Blueprint $table) use ($index): void {
+                    $table->dropUnique($index['name']);
+                });
+            }
+        }
+
+        $indexes = Schema::getIndexes($tableName);
+        $hasOrganizationHostUnique = collect($indexes)->contains(
+            fn (array $index): bool =>
+                ($index['unique'] ?? false)
+                && ($index['columns'] ?? []) === ['organization_id', 'host']
+        );
+
+        if (! $hasOrganizationHostUnique) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->unique(['organization_id', 'host']);
+            });
+        }
+
+        if (! Schema::hasColumn($tableName, 'verified_host')) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->string('verified_host')
+                    ->nullable()
+                    ->storedAs('IF(verified_at IS NULL, NULL, host)');
+            });
+        }
+
+        $indexes = Schema::getIndexes($tableName);
+        $hasVerifiedHostUnique = collect($indexes)->contains(
+            fn (array $index): bool =>
+                ($index['unique'] ?? false)
+                && ($index['columns'] ?? []) === ['verified_host']
+        );
+
+        if (! $hasVerifiedHostUnique) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->unique('verified_host');
+            });
+        }
     }
 
     /**
@@ -28,11 +74,49 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('school_domains', function (Blueprint $table): void {
-            $table->dropUnique(['verified_host']);
-            $table->dropColumn('verified_host');
-            $table->dropUnique(['organization_id', 'host']);
-            $table->unique('host');
-        });
+        $tableName = 'school_domains';
+
+        if (! Schema::hasTable($tableName)) {
+            return;
+        }
+
+        foreach (Schema::getIndexes($tableName) as $index) {
+            $columns = $index['columns'] ?? [];
+
+            if (($index['unique'] ?? false)
+                && $columns === ['verified_host']
+                && ! empty($index['name'])) {
+                Schema::table($tableName, function (Blueprint $table) use ($index): void {
+                    $table->dropUnique($index['name']);
+                });
+            }
+
+            if (($index['unique'] ?? false)
+                && $columns === ['organization_id', 'host']
+                && ! empty($index['name'])) {
+                Schema::table($tableName, function (Blueprint $table) use ($index): void {
+                    $table->dropUnique($index['name']);
+                });
+            }
+        }
+
+        if (Schema::hasColumn($tableName, 'verified_host')) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->dropColumn('verified_host');
+            });
+        }
+
+        $indexes = Schema::getIndexes($tableName);
+        $hasHostUnique = collect($indexes)->contains(
+            fn (array $index): bool =>
+                ($index['unique'] ?? false)
+                && ($index['columns'] ?? []) === ['host']
+        );
+
+        if (! $hasHostUnique) {
+            Schema::table($tableName, function (Blueprint $table): void {
+                $table->unique('host');
+            });
+        }
     }
 };
