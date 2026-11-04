@@ -16,6 +16,16 @@
         </april:button>
     </form>
 
+    <div class="relative flex items-center gap-3" aria-hidden="true">
+        <div class="h-px flex-1 bg-border"></div>
+        <span class="text-xs text-muted-foreground">OR</span>
+        <div class="h-px flex-1 bg-border"></div>
+    </div>
+
+    <a href="{{ route('login.okta') }}" class="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition hover:bg-muted">
+        Continue with TrueLearners (Okta)
+    </a>
+
     @if (config('demo.enabled'))
         <section class="space-y-3" aria-labelledby="demo-accounts-heading" x-data>
             <div class="space-y-1">
